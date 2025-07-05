@@ -23,7 +23,7 @@ async def embed(request: EmbedRequest):
     log.info(f"Received embedding request. Attempting to generate embeddings...")
     try:
         embeddings: Embeddings = await run_in_threadpool(
-            embedding_service.embed_text, request.texts, request.mode
+            embedding_service.embed_text, request.texts, request.embed_prefix
         )
 
         log.info(f"Successfully processed embedding request.")
