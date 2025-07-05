@@ -138,6 +138,9 @@ docker run -d -e MODEL_NAME="sentence-transformers/all-MiniLM-L6-v2" -p 8000:80 
 * **TLS**: Terminate SSL in a reverse proxy (e.g., NGINX, Traefik).
 * **Authentication**: Integrate with API gateways or token proxies if needed.
 
+## Disclaimer
+- At the time of preparing this repo, I was new to embedding models and am partially using this repo as a learning opportunity while building out a service to use for embedding sensitive data. If anything is inaccurate or can be improved upon, please let me know! Thank you!
+
 ## FAQs
 
 **Q: What ports should I open?**
