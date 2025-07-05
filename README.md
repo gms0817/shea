@@ -10,7 +10,7 @@ Shea is a Self-Hosted Embedding Service that uses the [multilingual-e5-small](ht
 ### 1. Build the Docker image
 Clone this project on your server, then from the project root:
 ```bash
-docker build -t embedding-api .
+docker build -t shea .
 ```
 
 ### 2. Run the container
