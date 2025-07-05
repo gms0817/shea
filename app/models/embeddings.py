@@ -7,7 +7,7 @@ Embeddings = Union[List[float], List[List[float]]]
 
 class EmbedRequest(BaseModel):
     texts: InputTexts
-    embed_prefix: Optional[str]
+    embed_prefix: Optional[str] = None
 
 class EmbedResponse(BaseModel):
     embeddings: Embeddings
