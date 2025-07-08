@@ -17,6 +17,9 @@ Shea enables affordable, private embedding generation for sensitive use cases wh
 - Docker ≥ 20.10
 - (Optional) A firewall or reverse proxy (e.g., NGINX) for secure access
 
+## Disclaimer
+- At the time of preparing this repo, I was new to embedding models and am partially using this repo as a learning opportunity while building out a service to use for embedding sensitive data. If anything is inaccurate or can be improved upon, please let me know! Thank you!
+
 ## Quick Start
 
 1. **Clone the repository**
@@ -63,18 +66,23 @@ Shea enables affordable, private embedding generation for sensitive use cases wh
 
 ## Configuration
 
-| Env Variable           | Default                          | Description                                                                |
-| ---------------------- | -------------------------------- | -------------------------------------------------------------------------- |
-| `MODEL_NAME`           | `intfloat/multilingual-e5-small` | Hugging Face model identifier                                              |
-| `DEVICE`               | *(auto-detected)*                | Force device selection: `cpu` or `cuda`. Leave unset to auto-detect.       |
-| `EMBED_PREFIX`         | `query:`                         | Prefix prepended to text (e.g., `query:`, `passage:`). Leave empty for none.|
-| `NORMALIZE_EMBEDDINGS` | `true`                           | Whether to L2-normalize embeddings (`true`/`false`).                       |
-| `MAX_CHUNK_LENGTH`     | `512`                            | Max tokens per chunk (triggers chunking on longer texts).                  |
-| `STRIDE`               | `50`                             | Number of overlapping tokens between chunks.                               |
-| `PADDING_MODE`         | `max_length`                     | Tokenizer padding strategy: `max_length` or `longest`.                     |
-| `CONCURRENCY_LIMIT`    | `10`                             | Max concurrent requests handled by Uvicorn.                                |
-| `PORT`                 | `80`                             | Port FastAPI server listens on inside the container.                       |
-| `LOG_LEVEL`            | `INFO`                           | Logging verbosity: `DEBUG`, `INFO`, `WARNING`, `ERROR`, or `CRITICAL`.     |
+| Env Variable            | Default                          | Description                                                                                   |
+|-------------------------|----------------------------------|-----------------------------------------------------------------------------------------------|
+| `MODEL_NAME`            | `intfloat/multilingual-e5-small` | Hugging Face model identifier                                                                 |
+| `DEVICE`                | *(auto-detected)*                | Force device selection: `cpu` or `cuda`. Leave unset to auto-detect.                         |
+| `EMBED_PREFIX`          | `query:`                         | Prefix prepended to text (e.g., `query:`, `passage:`). Leave empty for none.                 |
+| `NORMALIZE_EMBEDDINGS`  | `true`                           | Whether to L2-normalize embeddings (`true`/`false`).                                          |
+| `MAX_CHUNK_LENGTH`      | `512`                            | Max tokens per chunk (triggers chunking on longer texts).                                    |
+| `STRIDE`                | `50`                             | Number of overlapping tokens between chunks.                                                 |
+| `PADDING_MODE`          | `max_length`                     | Tokenizer padding strategy: `max_length` (pad to fixed length) or `longest` (pad to longest).|
+| `CONCURRENCY_LIMIT`     | `10`                             | Max concurrent requests handled by Uvicorn.                                                  |
+| `PORT`                  | `80`                             | Port FastAPI server listens on inside the container.                                         |
+| `LOG_LEVEL`             | `INFO`                           | Logging verbosity: `DEBUG`, `INFO`, `WARNING`, `ERROR`, or `CRITICAL`.                      |
+| `POOLING_MODE`          | `auto`                           | Pooling strategy: `mean`, `last_token`, or `auto` (detects based on model type).             |
+| `NUM_THREADS`           | `2`                              | Number of CPU threads to allocate for PyTorch inference.                                     |
+| `USE_GRADIENT_TRACKING` | `False`                          | Whether to enable gradient tracking (typically `False` for inference-only models).           |
+| `USE_TRUNCATION`        | `True`                           | Whether to truncate input text to `MAX_CHUNK_LENGTH`.                                        |
+| `USE_8BIT`              | `False`                          | Whether to load the model in 8-bit precision (e.g., with `bitsandbytes` or dynamic quantization). |
 
 You can override these by passing `-e` flags in your `docker run` command, e.g.:
 
@@ -137,9 +145,6 @@ docker run -d -e MODEL_NAME="sentence-transformers/all-MiniLM-L6-v2" -p 8000:80 
 * **Network**: Expose only on internal interfaces or behind a VPN/firewall.
 * **TLS**: Terminate SSL in a reverse proxy (e.g., NGINX, Traefik).
 * **Authentication**: Integrate with API gateways or token proxies if needed.
-
-## Disclaimer
-- At the time of preparing this repo, I was new to embedding models and am partially using this repo as a learning opportunity while building out a service to use for embedding sensitive data. If anything is inaccurate or can be improved upon, please let me know! Thank you!
 
 ## FAQs
 
