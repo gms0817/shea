@@ -30,7 +30,7 @@ class EmbeddingService:
 
         self._device = os.environ.get("DEVICE", detected_device)
         self._model.to(self._device)
-        self._truncation = os.environ.get("USE_TRUNCATION", True)
+        self._truncation = bool(os.environ.get("USE_TRUNCATION", True))
         self._max_length = int(os.environ.get("MAX_CHUNK_LENGTH", 512))
         self._stride = int(os.environ.get("STRIDE", 50))
         self._embed_prefix = os.environ.get("EMBED_PREFIX", None)
