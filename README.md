@@ -81,40 +81,49 @@ Shea enables affordable, private embedding generation for sensitive use cases wh
     ```
 
 ## Configuration
+
+### Embedding Model
+
 | Env Variable            | Default                          | Description                                                                                   |
 |-------------------------|----------------------------------|-----------------------------------------------------------------------------------------------|
 | `MODEL_NAME`            | `intfloat/multilingual-e5-small` | Hugging Face model identifier                                                                 |
-| `DEVICE`                | *(auto-detected)*                | Force device selection: `cpu` or `cuda`. Leave unset to auto-detect.                         |
-| `EMBED_PREFIX`          | `query:`                         | Prefix prepended to text (e.g., `query:`, `passage:`). Leave empty for none.                 |
+| `DEVICE`                | *(auto-detected)*                | Force device selection: `cpu` or `cuda`. Leave unset to auto-detect.                          |
+| `EMBED_PREFIX`          | `query:`                         | Prefix prepended to text (e.g., `query:`, `passage:`). Leave empty for none.                  |
 | `NORMALIZE_EMBEDDINGS`  | `true`                           | Whether to L2-normalize embeddings (`true`/`false`).                                          |
-| `MAX_CHUNK_LENGTH`      | `512`                            | Max tokens per chunk (triggers chunking on longer texts).                                    |
-| `STRIDE`                | `50`                             | Number of overlapping tokens between chunks.                                                 |
-| `PADDING_MODE`          | `max_length`                     | Tokenizer padding strategy: `max_length` (pad to fixed length) or `longest` (pad to longest).|
-| `CONCURRENCY_LIMIT`     | `10`                             | Max concurrent requests handled by Uvicorn.                                                  |
-| `PORT`                  | `80`                             | Port FastAPI server listens on inside the container.                                         |
-| `LOG_LEVEL`             | `INFO`                           | Logging verbosity: `DEBUG`, `INFO`, `WARNING`, `ERROR`, or `CRITICAL`.                      |
-| `POOLING_MODE`          | `auto`                           | Pooling strategy: `mean`, `last_token`, or `auto` (detects based on model type).             |
-| `NUM_THREADS`           | `2`                              | Number of CPU threads to allocate for PyTorch inference.                                     |
-| `USE_GRADIENT_TRACKING` | `False`                          | Whether to enable gradient tracking (typically `False` for inference-only models).           |
-| `USE_TRUNCATION`        | `True`                           | Whether to truncate input text to `MAX_CHUNK_LENGTH`.                                        |
-| `USE_8BIT`              | `False`                          | Whether to load the model in 8-bit precision (e.g., with `bitsandbytes` or dynamic quantization). |
-| `EMBEDDING_BATCH_SIZE`  | `4`                              | Number of inputs processed per batch. Increase for better throughput (depends on RAM/CPU).   |
-| `RETURN_SPARSE`         | `False`                          | Whether to return sparse lexical weights from the BGE-M3 model.                              |
-| `RETURN_COLBERT`        | `False`                          | Whether to return ColBERT-style multi-vector embeddings.                                     |
-| `USE_FP16`              | `False`                          | Whether to load the model in FP16 precision (if hardware supports it).                       |
+| `MAX_CHUNK_LENGTH`      | `512`                            | Max tokens per chunk (triggers chunking on longer texts).                                     |
+| `STRIDE`                | `50`                             | Number of overlapping tokens between chunks.                                                  |
+| `PADDING_MODE`          | `longest`                        | Tokenizer padding strategy: `max_length` (pad to fixed length) or `longest` (pad to longest). |
+| `CONCURRENCY_LIMIT`     | `10`                             | Max concurrent requests handled by Uvicorn.                                                   |
+| `PORT`                  | `80`                             | Port FastAPI server listens on inside the container.                                          |
+| `LOG_LEVEL`             | `INFO`                           | Logging verbosity: `DEBUG`, `INFO`, `WARNING`, `ERROR`, or `CRITICAL`.                       |
+| `POOLING_MODE`          | `auto`                           | Pooling strategy: `mean`, `last_token`, or `auto` (detects based on model type).              |
+| `NUM_THREADS`           | `2`                              | Number of CPU threads to allocate for PyTorch inference.                                      |
+| `USE_GRADIENT_TRACKING` | `False`                          | Whether to enable gradient tracking (typically `False` for inference-only models).            |
+| `USE_TRUNCATION`        | `True`                           | Whether to truncate input text to `MAX_CHUNK_LENGTH`.                                         |
+| `USE_8BIT`              | `False`                          | Whether to load the model in 8-bit precision (e.g., with `bitsandbytes`).                     |
+| `EMBEDDING_BATCH_SIZE`  | `4`                              | Number of inputs processed per batch. Increase for better throughput (depends on RAM/CPU).    |
+| `RETURN_SPARSE`         | `False`                          | Whether to return sparse lexical weights from the BGE-M3 model.                               |
+| `RETURN_COLBERT`        | `False`                          | Whether to return ColBERT-style multi-vector embeddings.                                      |
+| `USE_FP16`              | `False`                          | Whether to load the model in FP16 precision (if hardware supports it).                        |
 
-You can override these by passing `-e` flags in your `docker run` command, e.g.:
+### Reranker
 
-```bash
-docker run -d -e MODEL_NAME="sentence-transformers/all-MiniLM-L6-v2" -p 8000:80 shea
-````
+| Env Variable                 | Default                   | Description                                                                             |
+|------------------------------|---------------------------|-----------------------------------------------------------------------------------------|
+| `RERANK_MODEL_NAME`          | `BAAI/bge-reranker-v2-m3` | Hugging Face model identifier for the reranker.                                         |
+| `RERANKER_USE_TRUNCATION`    | `True`                    | Whether to truncate input pairs to `RERANKER_MAX_CHUNK_LENGTH`.                         |
+| `RERANKER_MAX_CHUNK_LENGTH`  | `512`                     | Max tokens per query-passage pair for the reranker.                                     |
+| `RERANKER_PADDING_MODE`      | `longest`                 | Tokenizer padding strategy for reranker: `max_length` or `longest`.                     |
 
 ## API Reference
 
 ### `GET /healthz`
 
 * **Description**: Health check endpoint.
-* **Response**: `200 OK` when the service is ready. Returns an empty body or `{}` depending on configuration.
+* **Response**: `200 OK` when the service is ready.
+  * ```json
+    {"status": "ok"}
+    ```
 
 ### `POST /embed`
 
@@ -132,32 +141,91 @@ docker run -d -e MODEL_NAME="sentence-transformers/all-MiniLM-L6-v2" -p 8000:80 
    * `texts` (required): array of strings to embed. Use a single-element array for one text input.
    * `embed_prefix` (optional): The prefix to prepend to the provided texts. Defaults to `"query: "` for compatibility with the default model: multilingual-e5-small.
 
+  * **Responses**:
+
+     * `200 OK`
+
+      ```json
+      {
+          "dense": [
+              [0.01, -0.12, ...],
+              [0.11,  0.05, ...]
+          ],
+          "sparse": [  // If enabled
+              {
+                  "indices": [12, 53, 99],
+                  "values": [0.8, 0.4, 0.1]
+              }
+          ],
+          "colbert": [  // If enabled
+              [
+                  [0.01, 0.02, ...],  // token 1
+                  [0.03, 0.04, ...]   // token 2
+              ],
+              [
+                  [0.05, 0.06, ...],
+                  [0.07, 0.08, ...]
+              ]
+          ]
+      }
+      ```
+     * `422 Unprocessable Entity` — validation error
+
+       ```json
+       {
+         "detail": [
+           {
+             "loc": ["body", "texts"],
+             "msg": "field required",
+             "type": "value_error.missing"
+           }
+         ]
+       }
+       ```
+
+### `POST /rerank`
+
+* **Description:**  
+  Rerank a list of candidate texts based on relevance to a given query.
+
+* **Request Body:** (`application/json`)
+```json
+    {
+      "query": "Some query",
+      "retrieved_texts": [
+        "c1",
+        "c2",
+        ...
+      ]
+    }
+```
+
+* `query` (required): The original query string
+* `retrieved_texts` (required): List of candidate strings to rerank
+
 * **Responses**:
+  * `200 OK`
 
-   * `200 OK`
+  ```json
+  {
+    "ranked_results": ["r1", "r2", ...]
+  }
 
-     ```json
-     {
-       "embeddings": [
-         [0.01, -0.12, ...],
-         [0.11,  0.05, ...]
-       ]
-     }
-     ```
-   * `422 Unprocessable Entity` — validation error
+  ```
 
-     ```json
-     {
-       "detail": [
-         {
-           "loc": ["body", "texts"],
-           "msg": "field required",
-           "type": "value_error.missing"
-         }
-       ]
-     }
-     ```
+  * `422 Unprocessable Entity` — validation error
 
+    ```json
+    {
+      "detail": [
+        {
+          "loc": ["body", "texts"],
+          "msg": "field required",
+          "type": "value_error.missing"
+        }
+      ]
+    }
+    ```
 
 ## Security
 

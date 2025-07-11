@@ -1,7 +1,7 @@
 import os
-from typing import Union, List, Optional
+from typing import Union, List, Optional, Any
 
-from app.executors.base_model_executor import BaseModelExecutor
+from app.executors.model.base_model_executor import BaseModelExecutor
 from FlagEmbedding import BGEM3FlagModel
 
 from app.models.embeddings import EmbedResponse
@@ -41,15 +41,29 @@ class BGEModelExecutor(BaseModelExecutor):
 
     def _convert_to_serializable_response(self, output: dict) -> EmbedResponse:
         dense_vecs = [v.tolist() for v in output["dense_vecs"]]
-        colbert_vecs = output.get("colbert_vecs", [])
         dense = dense_vecs[0] if len(dense_vecs) == 1 else dense_vecs
+        colbert_vecs = output.get("colbert_vecs", [])
         colbert = [v.tolist() for v in colbert_vecs] if self._return_colbert else None
+        sparse = (
+            [
+                {
+                    "indices": self._convert_to_list_safe(w["indices"]),
+                    "values": self._convert_to_list_safe(w["values"])
+                }
+                for w in output.get("lexical_weights", [])
+            ]
+            if self._return_sparse else None
+        )
+
         return EmbedResponse(
             dense=dense,
-            sparse=[
-                {"indices": w["indices"], "values": w["values"]}
-                for w in output.get("lexical_weights", [])
-            ] if self._return_sparse else None,
+            sparse=sparse,
             colbert=colbert
         )
 
+    def _convert_to_list_safe(self, object: Any):
+        if isinstance(object, (list, tuple)):
+            return object
+        if hasattr(object, "tolist"):
+            return object.tolist()
+        return [object]

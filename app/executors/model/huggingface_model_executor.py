@@ -1,7 +1,7 @@
 import platform
 
 from transformers import AutoTokenizer, AutoModel
-from app.executors.base_model_executor import BaseModelExecutor
+from app.executors.model.base_model_executor import BaseModelExecutor
 from app.models.embeddings import EmbedResponse
 import torch
 import torch.nn.functional as F
@@ -16,6 +16,7 @@ class HuggingFaceModelExecutor(BaseModelExecutor):
         self._device = device
         self._tokenizer = AutoTokenizer.from_pretrained(model_name)
         self._model = AutoModel.from_pretrained(model_name)
+        self._model.eval()
         use_8bit = bool(os.environ.get("USE_8BIT", False))
         if use_8bit:
             torch.quantization.quantize_dynamic(
@@ -25,13 +26,12 @@ class HuggingFaceModelExecutor(BaseModelExecutor):
         self._stride = int(os.environ.get("STRIDE", 50))
         self._truncation = bool(os.environ.get("USE_TRUNCATION", True))
         self._normalize = bool(os.environ.get("NORMALIZE_EMBEDDINGS", True))
-        self._padding = os.environ.get("PADDING_MODE", "max_length")
+        self._padding = os.environ.get("PADDING_MODE", "longest")
         pooling_mode = os.environ.get("POOLING_MODE", "auto")  # auto | mean | last_token
         self._pooling_fn: Callable = self._get_pooling_fn(
             pooling_mode=pooling_mode,
             model_name=model_name,
         )
-        self._prepare_torch()
         self._model.to(self._device)
 
     def embed(self, texts: Union[str, List[str]], prefix: str = None) -> EmbedResponse:
@@ -95,26 +95,3 @@ class HuggingFaceModelExecutor(BaseModelExecutor):
     def _last_token_pool(self, last_hidden_state, attention_mask):
         sequence_lengths = attention_mask.sum(dim=1) - 1
         return last_hidden_state[torch.arange(last_hidden_state.size(0)), sequence_lengths]
-
-    def _prepare_torch(self):
-        torch.set_num_threads(int(os.environ.get("NUM_THREADS", 2)))
-        torch.set_grad_enabled(bool(os.environ.get("USE_GRADIENT_TRACKING", False)))
-        use_8bit: bool = bool(os.environ.get("USE_8BIT", False))
-        if use_8bit:
-            self._set_quant_backend()
-
-    def _set_quant_backend(self):
-        system = platform.system().lower()
-        machine = platform.machine().lower()
-        if system == "darwin":  # macOS
-            torch.backends.quantized.engine = "qnnpack"
-        elif system == "windows":
-            torch.backends.quantized.engine = "fbgemm"
-        elif system == "linux":
-            # Use qnnpack on ARM CPUs, fbgemm on x86
-            if "arm" in machine or "aarch64" in machine:
-                torch.backends.quantized.engine = "qnnpack"
-            else:
-                torch.backends.quantized.engine = "fbgemm"
-        else:
-            raise RuntimeError(f"Unsupported platform for quantization: {system}")
