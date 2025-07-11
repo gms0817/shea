@@ -55,17 +55,32 @@ Shea enables affordable, private embedding generation for sensitive use cases wh
 
    **Response:**
 
-   ```json
-   {
-     "embeddings": [
-       [0.01, -0.12, ...],
-       [0.11,  0.05, ...]
-     ]
-   }
-   ```
+    ```json
+    {
+        "dense": [
+            [0.01, -0.12, ...],
+            [0.11,  0.05, ...]
+        ],
+        "sparse": [  // If enabled
+            {
+                "indices": [12, 53, 99],
+                "values": [0.8, 0.4, 0.1]
+            }
+        ],
+        "colbert": [  // If enabled
+            [
+                [0.01, 0.02, ...],  // token 1
+                [0.03, 0.04, ...]   // token 2
+            ],
+            [
+                [0.05, 0.06, ...],
+                [0.07, 0.08, ...]
+            ]
+        ]
+    }
+    ```
 
 ## Configuration
-
 | Env Variable            | Default                          | Description                                                                                   |
 |-------------------------|----------------------------------|-----------------------------------------------------------------------------------------------|
 | `MODEL_NAME`            | `intfloat/multilingual-e5-small` | Hugging Face model identifier                                                                 |
@@ -83,6 +98,10 @@ Shea enables affordable, private embedding generation for sensitive use cases wh
 | `USE_GRADIENT_TRACKING` | `False`                          | Whether to enable gradient tracking (typically `False` for inference-only models).           |
 | `USE_TRUNCATION`        | `True`                           | Whether to truncate input text to `MAX_CHUNK_LENGTH`.                                        |
 | `USE_8BIT`              | `False`                          | Whether to load the model in 8-bit precision (e.g., with `bitsandbytes` or dynamic quantization). |
+| `EMBEDDING_BATCH_SIZE`  | `4`                              | Number of inputs processed per batch. Increase for better throughput (depends on RAM/CPU).   |
+| `RETURN_SPARSE`         | `False`                          | Whether to return sparse lexical weights from the BGE-M3 model.                              |
+| `RETURN_COLBERT`        | `False`                          | Whether to return ColBERT-style multi-vector embeddings.                                     |
+| `USE_FP16`              | `False`                          | Whether to load the model in FP16 precision (if hardware supports it).                       |
 
 You can override these by passing `-e` flags in your `docker run` command, e.g.:
 

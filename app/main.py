@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse, ORJSONResponse
 from fastapi.concurrency import run_in_threadpool
-from app.models.embeddings import EmbedRequest, EmbedResponse, Embeddings
+from app.models.embeddings import EmbedRequest, EmbedResponse
 from app.services.embedding_service import EmbeddingService
 from app.utils.logging import log
 
@@ -10,7 +10,6 @@ app = FastAPI(
     title="Self-Hosted Embedding Service",
     default_response_class=ORJSONResponse
 )
-app = FastAPI()
 
 @app.get("/healthz")
 async def health_check():
@@ -22,13 +21,13 @@ async def embed(request: EmbedRequest):
 
     log.info(f"Received embedding request. Attempting to generate embeddings...")
     try:
-        embeddings: Embeddings = await run_in_threadpool(
+        response: EmbedResponse = await run_in_threadpool(
             embedding_service.embed_text, request.texts, request.embed_prefix
         )
 
         log.info(f"Successfully processed embedding request.")
         return JSONResponse(
-            content=EmbedResponse(embeddings=embeddings).model_dump(),
+            content=response.model_dump(),
             status_code=200
         )
     except Exception as e:
